@@ -1,12 +1,20 @@
 import logging
 import sys
+
+import openpyxl
 import openpyxl as op
 import calendar
 import time
 from openpyxl.styles import Color, PatternFill, Font, Border
-from openpyxl.styles import colors
-from openpyxl.cell import Cell
-from openpyxl import Workbook
+import os
+timestamp = str(time.strftime("%Y%m%d-%H%M%S"))
+resultpath = r'C:\Users\ljurkowski001\PycharmProjects\VWcomparison\result_'+timestamp
+os.makedirs(resultpath)
+output_name = resultpath+"\output"+timestamp+".txt"
+our_name = resultpath+"\Our"+timestamp+".xlsx"
+their_name = resultpath+"\Their"+timestamp+".xlsx"
+result_name = resultpath+"\Results"+timestamp+".xlsx"
+
 
 # TO DO
 # check whether one or more key is returned in their table
@@ -14,9 +22,7 @@ from openpyxl import Workbook
 
 # make sure that OUR table has exactly the same column order as mapping tupple
 
-# looking for the mapped column based on the given header
-
-logging.basicConfig(filename="output"+str(time.strftime("%Y%m%d-%H%M%S"))+".txt", filemode ='a', format='%(asctime)s,%(msecs)d %(name)s %(levelname)s %(message)s',datefmt='%H:%M:%S', level=logging.INFO)
+logging.basicConfig(filename=output_name, filemode ='a', format='%(asctime)s,%(msecs)d %(name)s %(levelname)s %(message)s',datefmt='%H:%M:%S', level=logging.INFO)
 white = PatternFill(fill_type =None)
 not_found = PatternFill(fill_type ="solid", start_color="D79707", end_color="D79707")
 green = PatternFill(fill_type ="solid", start_color="20BE60", end_color="20BE60")
@@ -32,47 +38,40 @@ def search_in_tuple(header_title):
         else:
             x = x + 1
         # print(mapping_tuple[x][y-1])
-
-#  returns the
 def find_column_number_in_their(column_name):
     list_index = 1
-    logging.debug("list = " + str(their_column_names) )
+    logging.info("list = " + str(their_column_names) )
     while (list_index <= len(their_column_names)+1):
         if str(their_column_names[list_index-1]) == str(column_name):
             return list_index-1
             break
         else:
             list_index = list_index + 1
-
 def looking_for_value_in_column(key_value, column_index):
     column_name = their_column_names[column_index]
-    return_tuple = tuple()
+    found_matches = 0
+    return_tuple = (False, "", found_matches)
     for column_cell in loantape_sh.iter_cols(1, loantape_sh.max_row):
         if column_cell[0].value == column_name:
             for data in column_cell[1:]:
                 # print("XXXXXXXXXXXXXX  "+ data.value)
-                if data.value == key_value:
-                    if data.value is not None:
+                if data.value is not None:
+                    if data.value == key_value:
                         logging.debug("I've found it in column " + column_name + " " + str(data.coordinate))
                         data.fill = green
-                        return_tuple = (True, str(data.row))
-                        logging.debug(return_tuple)
-                        break
-                    else:
-                        logging.info("I've reached eof")
-                        break
+                        found_matches = found_matches + 1
+                        logging.info(return_tuple)
+                        return_tuple = (True, str(data.row), found_matches)
                 else:
-                    return_tuple = (False, "")
-                    # data.fill = not_found
-                #     print("I'm in else")
-                #     return False
-
+                    logging.info("I've reached eof")
+                    break
     return return_tuple
 
+
+    return return_tuple
 def read_value_in_column_and_row(row, column):
     logging.debug("I'm in read_value_in_column_and_row and looking for: " + str(loantape_sh.cell(row=int(row), column=int(column)).value))
     return str(loantape_sh.cell(row=row, column=column).value)
-
 
 # stores number of rows where all instr_id taken from our file was not found in second table
 not_found_key = 0
@@ -82,22 +81,10 @@ lessorequal5fails = 0
 over5fails = 0
 over10fails = 0
 over20fails = 0
-# stores number of rows where at least 1 value differs
-not_correct = 0
-# stores the number of values matched within a single row
-local_match = 0
-# stores the number of values not-matched within a single row
-local_fail = 0
-# number of searches returning more than one rows with a instr_id
 duplicated_key = 0
-# number of rows in our file
 number_of_rows_ours = 0
-# number of rowss in their file
 number_of_rows_their = 0
 
-# output file to save the logs
-logFile = "output.txt"
-f = open(logFile, "w")
 
 # 1. read file our
 testing_worksheet = op.load_workbook("Our.xlsx")
@@ -111,13 +98,14 @@ mapping_tuple = (("KDW0001", "BIC/KLL1"), ("KDW0002", "BIC/LK2"), ("KDW0003", "B
 # 4. check number of rows
 row_number_ours = testing_sh.max_row
 row_number_their = loantape_sh.max_row
-logging.debug("our rows no: " + str(row_number_ours) + " ; their rows no: " + str(row_number_their))
+logging.info("our rows no: " + str(row_number_ours) + " ; their rows no: " + str(row_number_their))
 
 # go through their column list and save it
 their_column_names = list()
 for column_cell in loantape_sh.iter_cols():
     if str(column_cell[0].value) is not None:
         their_column_names.append(str(column_cell[0].value))
+
 
 # print("max col " + str(loantape_sh.max_column))
 # for column_value in loantape_sh.iter_cols(1,):
@@ -126,11 +114,12 @@ for column_cell in loantape_sh.iter_cols():
 #             cell.value = ""
 
 column_numbers = len(their_column_names)
-print("len(their_column_names) " + str(column_numbers) + " mapping tuple len = " + str(len(mapping_tuple)))
-print("max_column " + str(loantape_sh.max_column))
+# print("len(their_column_names) " + str(column_numbers) + " mapping tuple len = " + str(len(mapping_tuple)))
+# print("max_column " + str(loantape_sh.max_column))
 loantape_sh.insert_cols(idx=int(str(loantape_sh.max_column+1)))
-print("max_column after added " + str(loantape_sh.max_column))
+# print("max_column after added " + str(loantape_sh.max_column))
 max_column = loantape_sh.max_column
+loantape_sh.delete_cols(idx=int(column_numbers+1))
 
 key_value = "A1"
 i = 2
@@ -150,16 +139,17 @@ for row_cell in testing_sh.iter_rows(2,):
         logging.info("Current value I'll be looking at their table as key:  " + str(our_key_value))
         key_value_tuple = (False, "A1")
         key_value_tuple = looking_for_value_in_column(our_key_value, index_their_column_names)
+        # print("key_value_tuple: " + str(key_value_tuple[0]) + str(key_value_tuple[1]) + str(key_value_tuple[2]))
 
 
-        if key_value_tuple is not None and key_value_tuple[0] == True:
+        if key_value_tuple is not None and key_value_tuple[0] == True and key_value_tuple[2] == 1:
             logging.debug("I've found the key value in their column")
             # I've found the key, now I can go through the rest of columns
             local_match = 0
             local_fail = 0
             local_errors = ""
             column_index = 2
-            for cell in row_cell[1:]:
+            for cell in row_cell[1:max_column]:
                 # if cell.column <= max_column and cell.value is not None:
                 logging.info("----------------------------")
 
@@ -168,6 +158,7 @@ for row_cell in testing_sh.iter_rows(2,):
 
                 # find value in following column and in above row                    logging.debug(str(mapping_tuple[column_index-1][1]))
                 # 1. read the column_header of that value from tuple
+                # print(column_index)
                 index_column = find_column_number_in_their(mapping_tuple[column_index-1][1])
                 # print ("read value= " + str(loantape_sh.cell(row=5, column=10).value))
                 returned_value = loantape_sh.cell(row=int(key_value_tuple[1]), column=int(index_column+1)).value
@@ -198,14 +189,25 @@ for row_cell in testing_sh.iter_rows(2,):
                 column_index = column_index + 1
 
             if local_fail > 0:
-                print(local_errors)
+                # print(local_errors)
                 loantape_sh.cell(row=int(key_value_tuple[1]),column=max_column+1).value = "Number of failures: " + str(local_fail) + "; " + str(local_errors)
 
-        else:
+
+        elif key_value_tuple is not None and key_value_tuple[2] == 0:
             logging.debug("I've not found it")
+            testing_sh.cell(row=i, column=max_column+1).value = "Key not found"
             row_cell[0].fill = not_found
             not_found_key = not_found_key + 1
             local_match = 0
+
+        elif key_value_tuple is not None and key_value_tuple[2] > 1:
+            logging.debug("That key has more than one match")
+            duplicated_key = duplicated_key + 1
+            testing_sh.cell(row=i, column=int(max_column+1)).value = "Testing value: " + str(our_key_value) + " has more than one match"
+
+
+
+
 
         logging.info("for entire row " + str(i) + " , matched values: " + str(local_match) + " and not matched values: " + str(local_fail))
         if local_match > 0 and local_fail == 0 :
@@ -227,14 +229,35 @@ for row_cell in testing_sh.iter_rows(2,):
         logging.info("I've reached end of file in row " + str(i))
         break
 
-loantape_worksheet.save("Their.xlsx")
-testing_worksheet.save("Our.xlsx")
+loantape_worksheet.save(their_name)
+testing_worksheet.save(our_name)
 
+# to add also the percentage of the results based on the numbers
 
-logging.info("Not found keys: " + str(not_found_key))
-logging.info("rows with all correct values: " + str(all_correct_values))
-logging.info("rows with no more than 5 fails " + str(lessorequal5fails))
-logging.info("rows with no more than 10 fails " + str(over5fails))
-logging.info("rows with no more than 20 fails " + str(over10fails))
-logging.info("rows with more than 20 fails " + str(over20fails))
+logging.info("Not found keys: " + str(not_found_key) + "; " + str(round(100* not_found_key/row_number_ours, 2)) + "%")
+logging.info("Duplicated keys: " + str(duplicated_key) + "; " + str(round(100* duplicated_key/row_number_ours, 2)) + "%")
+logging.info("rows with all correct values: " + str(all_correct_values) + "; " + str(round(100* all_correct_values/row_number_ours, 2)) + "%")
+logging.info("rows with no more than 5 fails " + str(lessorequal5fails) + "; " + str(round(100* lessorequal5fails/row_number_ours, 2)) + "%")
+logging.info("rows with no more than 10 fails " + str(over5fails) + "; " + str(round(100* over5fails/row_number_ours, 2)) + "%")
+logging.info("rows with no more than 20 fails " + str(over10fails) + "; " + str(round(100* over10fails/row_number_ours, 2)) + "%")
+logging.info("rows with more than 20 fails " + str(over20fails) + "; " + str(round(100* over20fails/row_number_ours, 2)) + "%")
 
+res = op.Workbook()
+res_sheet = res.active
+
+for column_loantape in loantape_sh.iter_cols(1, column_numbers):
+    # print(column_loantape[0].value)
+    if str(column_loantape[0].value) is not None:
+        number_of_errors = 0
+        res_sheet.cell(row=1, column = int(column_loantape[0].column)).value = column_loantape[0].value
+        for data in column_loantape[1:row_number_their]:
+            # if data.fill.start_color.index == "ee6b6e":
+            # print("data = " + str(data.value))
+            # print("colour = " + str(data.fill.start_color.index))
+            if data.fill.start_color.index == "00ee6b6e":
+                number_of_errors = number_of_errors + 1
+                # print("I'm in column " + str(column_loantape[0].value) +  " and row " + str(data.row) + "and value checked = " + str(data.value) + " and colour = " + str(data.fill.start_color.index))
+        res_sheet.cell(row=2, column=int(column_loantape[0].column)).value =number_of_errors
+
+res.save(result_name)
+#
