@@ -9,6 +9,7 @@ import os
 Testing_file_name = "Testing"
 Loantape_file_name = "Loantape"
 
+
 timestamp = str(time.strftime("%Y%m%d-%H%M%S"))
 resultpath = r'C:\Users\ljurkowski001\PycharmProjects\VWcomparison\result_'+timestamp
 os.makedirs(resultpath)
